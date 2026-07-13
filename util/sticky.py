@@ -1,20 +1,32 @@
 import discord
-from collections import defaultdict
 
 
+async def sticker(client, message, config, previous_message, counter):
+    if message.author == client.user:
+        return
 
-async def sticker(client, message, config, semaphore, previous_message, counter):
-    client.counter = defaultdict(int, client.counter)
-    if message.author != client.user and (not config["allowed_channels"] or str(message.channel.id) in config["allowed_channels"]):
-        async with semaphore:
-            client.counter[str(message.channel.id)] += 1
-            if client.counter[str(message.channel.id)] == config["thresholds"][str(message.channel.id)]:
-                bot_message = config["bot_message"].get(str(message.channel.id), "default message")
-                prev_msg = client.previous_message.get(str(message.channel.id))
-                if prev_msg:
-                    try:
-                        await prev_msg.delete()
-                    except discord.errors.NotFound:
-                        pass
-                client.previous_message[str(message.channel.id)] = await message.channel.send(bot_message)
-                client.counter[str(message.channel.id)] = 0
+    channel_id = str(message.channel.id)
+    allowed = config["allowed_channels"]
+    if allowed and channel_id not in allowed:
+        return
+
+    threshold = config["thresholds"].get(channel_id)
+    if not threshold:
+        return
+
+    lock = client.channel_locks[channel_id]
+    async with lock:
+        counter[channel_id] += 1
+        if counter[channel_id] < threshold:
+            return
+
+        bot_message = config["bot_message"].get(channel_id, "default message")
+        prev_msg = previous_message.get(channel_id)
+        if prev_msg:
+            try:
+                await prev_msg.delete()
+            except discord.errors.NotFound:
+                pass
+
+        previous_message[channel_id] = await message.channel.send(bot_message)
+        counter[channel_id] = 0
