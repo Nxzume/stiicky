@@ -6,4 +6,4 @@ Instructions:
 3.    Enter your bot token and then restart the main.py or stickybot.exe
 
 # commands
-use !help to view commandn
+use !help to view commands
